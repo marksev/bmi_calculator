@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BMI Calculator</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --primary: #2563eb;
+      --ok: #10b981;
+      --warn: #ef4444;
+      --blue: #3b82f6;   /* Underweight */
+      --green: #22c55e;  /* Normal */
+      --red: #ef4444;    /* Overweight/Obese */
+      --shadow: 0 8px 30px rgba(0,0,0,.07);
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background: var(--bg);
+      color: var(--text);
+    }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 16px; }
+    .app { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+    header h1 { font-size: 24px; margin: 0; letter-spacing: .2px; }
+
+    .grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+    @media (min-width: 640px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+    label { font-size: 14px; color: var(--muted); display: block; margin-bottom: 6px; }
+    .field { display: flex; align-items: center; gap: 10px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 10px 12px; }
+    .field input { width: 100%; border: 0; outline: none; background: transparent; font-size: 16px; padding: 6px 2px; }
+    .suffix { color: var(--primary); font-weight: 600; white-space: nowrap; }
+
+    .actions { margin-top: 8px; display: flex; gap: 10px; }
+    button { appearance: none; border: 0; cursor: pointer; border-radius: 999px; padding: 12px 18px; font-weight: 700; background: var(--primary); color: white; box-shadow: 0 6px 18px rgba(37, 99, 235, .25); }
+    button.secondary { background: #e5e7eb; color: #111827; box-shadow: none; }
+
+    .gauge-card { margin-top: 18px; background: #fafafa; border: 1px solid #eee; border-radius: 16px; padding: 16px; }
+    .gauge-wrap { display:flex; align-items:center; justify-content:center; }
+    .gauge-meta { text-align:center; margin-top: 6px; }
+    .bmi-value { font-size: 34px; font-weight: 800; color: var(--primary); line-height: 1; }
+    .category { font-weight: 700; }
+
+    .rows { margin-top: 18px; display:grid; gap:12px; }
+    .row { display:flex; align-items:center; justify-content:space-between; background:#f9fafb; border:1px solid #e5e7eb; padding:12px 14px; border-radius:12px; }
+
+    .muted { color: var(--muted); }
+    .small { font-size: 12px; }
+    .note { margin-top: 12px; color: var(--muted); font-size: 12px; }
+
+    .table { margin-top: 8px; border-collapse: collapse; width:100%; font-size: 14px; }
+    .table th, .table td { padding: 8px 6px; border-bottom: 1px dashed #e5e7eb; }
+    .table th { text-align:left; color: var(--muted); font-weight:600; }
+
+    .pill { padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight:700; }
+    .pill.blue { background: rgba(59,130,246,.1); color: var(--blue); }
+    .pill.green { background: rgba(34,197,94,.12); color: var(--green); }
+    .pill.red { background: rgba(239,68,68,.12); color: var(--red); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="app">
+      <header><h1>BMI Calculator</h1></header>
+
+      <div class="grid">
+        <div>
+          <label for="height">Height</label>
+          <div class="field"><input id="height" type="number" inputmode="decimal" placeholder="e.g. 169" min="1" step="0.1" /> <div class="suffix">cm</div></div>
+        </div>
+        <div>
+          <label for="weight">Weight</label>
+          <div class="field"><input id="weight" type="number" inputmode="decimal" placeholder="e.g. 70" min="1" step="0.1" /> <div class="suffix">kg</div></div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="calcBtn">CONTINUE</button>
+        <button id="resetBtn" class="secondary">Reset</button>
+      </div>
+
+      <section class="gauge-card">
+        <div class="gauge-wrap">
+          <svg id="gauge" viewBox="0 0 300 180" width="100%" style="max-width:540px">
+            <path id="seg1" stroke="var(--blue)" stroke-width="14" fill="none" stroke-linecap="round" />
+            <path id="seg2" stroke="var(--green)" stroke-width="14" fill="none" stroke-linecap="round" />
+            <path id="seg3" stroke="var(--red)" stroke-width="14" fill="none" stroke-linecap="round" />
+            <g id="ticks" font-size="12" fill="#6b7280" text-anchor="middle"></g>
+            <g id="needle" transform="translate(150,150)">
+              <line x1="0" y1="0" x2="0" y2="-110" stroke="#111827" stroke-width="2.5" />
+              <circle cx="0" cy="0" r="5.5" fill="#111827" />
+            </g>
+          </svg>
+        </div>
+        <div class="gauge-meta">
+          <div class="muted small">BMI</div>
+          <div class="bmi-value" id="bmiOut">0.0</div>
+          <div id="catOut" class="category muted">—</div>
+        </div>
+
+        <div class="rows">
+          <div class="row"><div>Category</div><div id="catPill" class="pill">—</div></div>
+          <div class="row"><div>Normal weight for your height</div><div id="rangeOut" class="muted">—</div></div>
+          <div class="row"><div>Difference to healthy range</div><div id="diffOut" class="muted">—</div></div>
+        </div>
+
+        <details class="note" style="margin-top:14px">
+          <summary class="muted">BMI Chart</summary>
+          <table class="table">
+            <thead><tr><th>Category</th><th>BMI</th></tr></thead>
+            <tbody>
+              <tr><td>Very Severely Underweight</td><td>≤ 15.9</td></tr>
+              <tr><td>Severely Underweight</td><td>16.0 – 16.9</td></tr>
+              <tr><td>Underweight</td><td>17.0 – 18.4</td></tr>
+              <tr><td><strong>Normal</strong></td><td><strong>18.5 – 24.9</strong></td></tr>
+              <tr><td>Overweight</td><td>25.0 – 29.9</td></tr>
+              <tr><td>Obese Class I</td><td>30.0 – 34.9</td></tr>
+              <tr><td>Obese Class II</td><td>35.0 – 39.9</td></tr>
+              <tr><td>Obese Class III</td><td>≥ 40.0</td></tr>
+            </tbody>
+          </table>
+        </details>
+        <div class="note">Note: BMI is a screening tool and doesn’t account for muscle mass or other factors.</div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
+    const map = (v, inMin, inMax, outMin, outMax) => (v - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
+    const fmt = (n, d=1) => Number(n).toFixed(d);
+
+    const elH = document.getElementById('height');
+    const elW = document.getElementById('weight');
+    const btn = document.getElementById('calcBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const outBMI = document.getElementById('bmiOut');
+    const outCat = document.getElementById('catOut');
+    const outPill = document.getElementById('catPill');
+    const outRange = document.getElementById('rangeOut');
+    const outDiff = document.getElementById('diffOut');
+
+    const seg1 = document.getElementById('seg1');
+    const seg2 = document.getElementById('seg2');
+    const seg3 = document.getElementById('seg3');
+    const ticks = document.getElementById('ticks');
+    const needle = document.getElementById('needle');
+
+    const cx = 150, cy = 150, r = 120;
+    function pt(aDeg) { const a = (aDeg - 90) * Math.PI / 180; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; }
+    function arcPath(a1, a2) {
+      const [x1, y1] = pt(a1), [x2, y2] = pt(a2);
+      const large = (a2 - a1) > 180 ? 1 : 0;
+      return `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2}`;
+    }
+
+    const A_MIN = -90, A_MAX = 90;
+    const BMIN = 16, BMAX = 40;
+    const B1 = 18.5, B2 = 25;
+
+    function bmiToAngle(b) { return map(clamp(b, BMIN, BMAX), BMIN, BMAX, A_MIN, A_MAX); }
+
+    function drawGaugeOnce() {
+      seg1.setAttribute('d', arcPath(bmiToAngle(BMIN), bmiToAngle(B1)));
+      seg2.setAttribute('d', arcPath(bmiToAngle(B1), bmiToAngle(B2)));
+      seg3.setAttribute('d', arcPath(bmiToAngle(B2), bmiToAngle(BMAX)));
+
+      const marks = [BMIN, B1, B2, BMAX];
+      ticks.innerHTML = '';
+      marks.forEach(m => {
+        const a = bmiToAngle(m);
+        const [x, y] = pt(a);
+        const tx = x; const ty = y + 16;
+        const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        t.setAttribute('x', tx); t.setAttribute('y', ty);
+        t.textContent = m;
+        ticks.appendChild(t);
+      });
+    }
+    drawGaugeOnce();
+
+    function setNeedle(bmi) {
+      const angle = bmiToAngle(bmi);
+      needle.setAttribute('transform', `translate(${cx},${cy}) rotate(${angle})`);
+    }
+
+    function category(b) {
+      if (b < 16) return ['Very severely underweight', 'blue'];
+      if (b < 17) return ['Severely underweight', 'blue'];
+      if (b < 18.5) return ['Underweight', 'blue'];
+      if (b < 25) return ['Normal', 'green'];
+      if (b < 30) return ['Overweight', 'red'];
+      if (b < 35) return ['Obese Class I', 'red'];
+      if (b < 40) return ['Obese Class II', 'red'];
+      return ['Obese Class III', 'red'];
+    }
+
+    function compute() {
+      const h = parseFloat(elH.value);
+      const w = parseFloat(elW.value);
+      if (!h || !w || h <= 0 || w <= 0) {
+        outBMI.textContent = '0.0';
+        outCat.textContent = '—';
+        outPill.textContent = '—';
+        outPill.className = 'pill';
+        outRange.textContent = '—';
+        outDiff.textContent = '—';
+        setNeedle(BMIN);
+        return;
+      }
+      const hm = h / 100;
+      const bmi = w / (hm * hm);
+      outBMI.textContent = fmt(bmi, 1);
+
+      const [cat, tone] = category(bmi);
+      outCat.textContent = cat;
+      outPill.textContent = cat;
+      outPill.className = `pill ${tone}`;
+
+      const wMin = 18.5 * hm * hm;
+      const wMax = 24.9 * hm * hm;
+      outRange.textContent = `${fmt(wMin,1)} – ${fmt(wMax,1)} kg`;
+
+      if (bmi < 18.5) {
+        const need = wMin - w;
+        outDiff.textContent = `+${fmt(need,1)} kg to reach BMI 18.5`;
+      } else if (bmi > 24.9) {
+        const need = w - wMax;
+        outDiff.textContent = `−${fmt(need,1)} kg to reach BMI 24.9`;
+      } else {
+        outDiff.textContent = 'You are in the healthy range';
+      }
+      setNeedle(bmi);
+      localStorage.setItem('bmi_h', String(h));
+      localStorage.setItem('bmi_w', String(w));
+    }
+
+    btn.addEventListener('click', compute);
+    elH.addEventListener('keydown', e => { if (e.key === 'Enter') compute(); });
+    elW.addEventListener('keydown', e => { if (e.key === 'Enter') compute(); });
+
+    resetBtn.addEventListener('click', () => {
+      elH.value = '';
+      elW.value = '';
+      localStorage.removeItem('bmi_h');
+      localStorage.removeItem('bmi_w');
+      compute();
+    });
+
+    const ph = localStorage.getItem('bmi_h');
+    const pw = localStorage.getItem('bmi_w');
+    if (ph) elH.value = ph;
+    if (pw) elW.value = pw;
+    compute();
+  </script>
+</body>
+</html>
